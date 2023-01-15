@@ -1,47 +1,39 @@
 package com.billo.backend.service;
 
+import com.billo.backend.exceptions.UserDoesntExistException;
 import com.billo.backend.model.User;
+import com.billo.backend.model.UserLogin;
+import com.billo.backend.repository.UserLoginRepository;
 import com.billo.backend.repository.UserRepository;
-import com.billo.backend.security.UserRequestVo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 
 @Service
 public class UserService {
-
+    private static final Logger LOG = LoggerFactory.getLogger(UserService.class);
     @Autowired
     private UserRepository userRepository;
-
-    public void registerNewUser(UserRequestVo userRequestVo) {
-        User user = User.builder().username(userRequestVo.getUsername()).password(userRequestVo.getPassword()).email(userRequestVo.getEmail()).build();
-
-        userRepository.save(user);
-    }
-
-    public UserRequestVo getUserById(String id) throws Exception {
-        User user;
-        if (id == null) {
-            return null;
-        }
-
-        try {
-            user = userRepository.findUserById(id);
-        }  catch (Exception ex) {
-            throw new Exception();
-        }
-
-        return UserRequestVo.builder().username(user.getUsername()).email(user.getEmail()).build();
-    }
+    @Autowired
+    private UserLoginRepository userLoginRepository;
+    @Autowired
+    private ElasticsearchOperations elasticsearchOperations;
 
     public User getUserByUsername(String username) throws Exception {
         if (username == null) {
             return null;
         }
+        User user = userRepository.findUserByUsername(username);
+
+        if (user == null) {
+            throw new UserDoesntExistException();
+        }
 
         try {
-            return userRepository.findUserByUsername(username);
+            return user;
         } catch (Exception ex) {
             throw new Exception();
         }
@@ -50,6 +42,14 @@ public class UserService {
     public List<User> getAllUsers() throws Exception {
         try {
             return userRepository.findAll();
+        } catch (Exception ex) {
+            throw new Exception();
+        }
+    }
+
+    public List<UserLogin> getAllUsersLogin() throws Exception {
+        try {
+            return userLoginRepository.findAll();
         } catch (Exception ex) {
             throw new Exception();
         }
